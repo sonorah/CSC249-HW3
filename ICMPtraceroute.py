@@ -24,14 +24,26 @@ def build_packet():
     # Fill in start #
     #---------------#
 
-        # TODO: Make the header in a similar way to the ping exercise.
-        # Append checksum to the header.
-        
+    # TODO: Make the header in a similar way to the ping exercise.
+    # Append checksum to the header.
+    
+    myChecksum = 0
+    myID = os.getpid() & 0xFFFF # Return the current process i
+    header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, myID, 1) 
+    data = struct.pack("d", time.time())    
+    
+    # Get the right checksum, and put in the header 
+    if sys.platform == 'darwin':
+        # Convert 16-bit integers from host to network byte order 
+        myChecksum = htons(myChecksum) & 0xffff
+    else:
+        myChecksum = htons(myChecksum)
+
+    header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, myID, 1) 
     #-------------#
     # Fill in end #
     #-------------#
 
-    # Don’t send the packet yet , just return the final packet in this function.
     packet = header + data
     return packet
 
@@ -45,7 +57,10 @@ def get_route(hostname):
             # Fill in start #
             #---------------#
 
-                # TODO: Make a raw socket named mySocket
+            # TODO: Make a raw socket named mySocket
+
+            icmp = getprotobyname("icmp")
+            mySocket = socket(AF_INET, SOCK_RAW, icmp)
 
             #-------------#
             # Fill in end #
@@ -57,7 +72,7 @@ def get_route(hostname):
             try:
                 d = build_packet()
                 mySocket.sendto(d, (hostname, 0))
-                t= time.time()
+                t = time.time()
                 startedSelect = time.time()
                 whatReady = select.select([mySocket], [], [], timeLeft)
                 howLongInSelect = (time.time() - startedSelect)
@@ -80,7 +95,9 @@ def get_route(hostname):
                 # Fill in start #
                 #---------------#
 
-                    #TODO: Fetch the icmp type from the IP packet
+                #TODO: Fetch the icmp type from the IP packet
+                icmpHeader = recvPacket[20:28]
+                types, code, checksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
 
                 #-------------#
                 # Fill in end #
@@ -110,4 +127,4 @@ def get_route(hostname):
             finally:
                 mySocket.close()
 
-get_route("google.com")
+get_route("statehouse.gov.ng")

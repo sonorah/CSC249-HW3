@@ -61,8 +61,24 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         # Fill in start #
         #---------------#
 
-            # TODO: Fetch the ICMP header from the IP packet
+        # TODO: Fetch the ICMP header from the IP packet
+        
+        #get ICMP header from packet (byte 20 to 28)
+        icmpHeader = recPacket[20:28]
+        #unpack packet
+        icmpType, code, myChecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
 
+        #type must be 0, so this condition checks for unpacked packets
+        if type != 8:
+            #check for a match in ID
+            if  packetID == ID:
+                #get size of the reply
+                sizeOfReply = struct.calcsize("d")
+                #extract time it was sent 
+                timeSent = struct.unpack("d", recPacket[28:28 + sizeOfReply])[0]
+                #return difference
+                return timeReceived - timeSent
+       
         #-------------#
         # Fill in end #
         #-------------#
@@ -85,7 +101,8 @@ def sendOnePing(mySocket, destAddr, ID):
     data = struct.pack("d", time.time())
 
     # Calculate the checksum on the data and the dummy header. 
-    myChecksum = checksum(str(header + data))
+    myChecksum = checksum(header + data)
+    #myChecksum = checksum(''.join(map(chr, header+data)))
 
     # Get the right checksum, and put in the header 
     if sys.platform == 'darwin':
@@ -131,9 +148,13 @@ def ping(host, timeout=1):
     # Send ping requests to a server separated by approximately one second 
     while True :
         delay = doOnePing(dest, timeout) 
-        print(delay)
+        print("RTT: ", delay)
+        #print("HOST: ", host)
+        
         time.sleep(1) # one second 
     return delay
 
 # Runs program
-ping("google.com")
+if __name__ == "__main__":
+    ping("statehouse.gov.ng")
+
